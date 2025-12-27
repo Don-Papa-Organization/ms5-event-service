@@ -1,17 +1,13 @@
-import express, { Express, Request, Response, NextFunction} from "express";
+import express, { Express, Request, Response } from "express";
 import promotionRoutes from "./routes/promotionRoutes";
+import eventRoutes from "./routes/eventRoutes";
+import eventoDiaSemanaRoutes from "./routes/eventoDiaSemanaRoutes";
+import productoPromocionRoutes from "./routes/productoPromocionRoutes";
 
 const app: Express = express();
 
 // Aumentar límite de body para JSON
 app.use(express.json({ limit: '50mb' }));
-
-// Middleware global para loggear todas las peticiones
-app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`[REQUEST] ${req.method} ${req.path} - Headers: ${JSON.stringify(req.headers)}`);
-  console.log(`[REQUEST] Body length: ${req.headers['content-length']}`);
-  next();
-});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -19,5 +15,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use("/api/promotions", promotionRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/eventos-dias", eventoDiaSemanaRoutes);
+app.use("/api/productos-promocion", productoPromocionRoutes);
 
 export default app;

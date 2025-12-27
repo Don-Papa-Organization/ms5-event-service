@@ -1,26 +1,15 @@
 import { Request, Response } from "express";
-import { PromocionRepository } from "../repositories/promocionesRepository";
-import { PromotionDto } from "../dtos/promotionDto";
+import { PromocionService } from "../services/promocionService";
+import { PromocionDto } from "../domain/dto/promocionDto";
 import { TipoUsuario } from "../types/express";
 
-const promocionRepository = new PromocionRepository();
+const promocionService = new PromocionService();
 
-/**
- * CU031 - Obtener promociones activas
- * Permite a cualquier usuario autenticado ver las promociones vigentes
- */
+
 export const getPromocionesActivas = async (req: Request, res: Response): Promise<any> => {
     try {
-        // Validar autenticación
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-
         const activas = req.params.activas === "true";
-        const promociones = await promocionRepository.findByActivas(activas);
+        const promociones = await promocionService.getPromocionesActivas(activas);
 
         if (!promociones || promociones.length === 0) {
             return res.json({ message: "No hay promociones disponibles", data: [] });
@@ -37,17 +26,7 @@ export const getPromocionesActivas = async (req: Request, res: Response): Promis
  */
 export const getPromociones = async (req: Request, res: Response): Promise<any> => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-        if (req.user.tipoUsuario === TipoUsuario.cliente) {
-            return res.status(403).json({ message: "El usuario debe ser admin o empleado" });
-        }
-
-        const promociones = await promocionRepository.findAll();
+        const promociones = await promocionService.getAllPromociones();
         res.json(promociones);
     } catch (error) {
         res.status(500).json({ message: "Error al obtener promociones", error });
@@ -59,17 +38,7 @@ export const getPromociones = async (req: Request, res: Response): Promise<any> 
  */
 export const getPromocionById = async (req: Request, res: Response): Promise<any> => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-        if (req.user.tipoUsuario === TipoUsuario.cliente) {
-            return res.status(403).json({ message: "El usuario debe ser admin o empleado" });
-        }
-
-        const promocion = await promocionRepository.findById(parseInt(req.params.id));
+        const promocion = await promocionService.getPromocionById(parseInt(req.params.id));
         if (!promocion) {
             return res.status(404).json({ message: "Promoción no encontrada" });
         }
@@ -80,179 +49,73 @@ export const getPromocionById = async (req: Request, res: Response): Promise<any
     }
 };
 
-/**
- * CU50 - Crear una nueva promoción
- * Solo administradores pueden crear promociones
- * Validaciones:
- * - Todos los campos obligatorios
- * - Fecha de fin debe ser posterior a fecha de inicio
- * - Tipo de promoción válido (porcentaje, precio_fijo, combo)
- */
+
 export const createPromocion = async (req: Request, res: Response): Promise<any> => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-        if (req.user.tipoUsuario !== TipoUsuario.administrador) {
-            return res.status(403).json({ message: "Solo administradores pueden crear promociones" });
-        }
-
         const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion, activo } = req.body;
 
-        // Validar campos obligatorios
-        if (!nombre || !descripcion || !fechaInicio || !fechaFin || !tipoPromocion) {
-            return res.status(400).json({ 
-                message: "Faltan campos obligatorios",
-                campos_requeridos: ["nombre", "descripcion", "fechaInicio", "fechaFin", "tipoPromocion"]
-            });
-        }
-
-        // Validar tipo de promoción
-        const tiposValidos = ["porcentaje", "precio_fijo", "combo"];
-        if (!tiposValidos.includes(tipoPromocion)) {
-            return res.status(400).json({ 
-                message: "Tipo de promoción inválido",
-                tipos_validos: tiposValidos
-            });
-        }
-
-        // Validar fechas
-        const inicio = new Date(fechaInicio);
-        const fin = new Date(fechaFin);
-
-        if (fin <= inicio) {
-            return res.status(400).json({ 
-                message: "La fecha de fin debe ser posterior a la fecha de inicio"
-            });
-        }
-
-        const promocionData: PromotionDto = {
+        const promocionData: PromocionDto = {
             nombre,
             descripcion,
-            fechaInicio: inicio,
-            fechaFin: fin,
+            fechaInicio,
+            fechaFin,
             tipoPromocion,
             activo: activo !== undefined ? activo : true
         };
 
-        const promocionGuardada = await promocionRepository.create(promocionData);
+        const promocionGuardada = await promocionService.createPromocion(promocionData);
         res.status(201).json({
             message: "Promoción creada exitosamente",
             data: promocionGuardada
         });
-    } catch (error) {
-        res.status(400).json({ message: "Error al crear la promoción", error });
+    } catch (error: any) {
+        res.status(400).json({ message: "Error al crear la promoción", error: error.message });
     }
 };
 
-/**
- * CU51 - Actualizar una promoción
- * Solo administradores pueden actualizar promociones
- * Validaciones:
- * - La promoción debe existir
- * - Fecha de fin debe ser posterior a fecha de inicio (si se actualiza)
- * - Tipo de promoción válido (si se actualiza)
- */
+
 export const updatePromocion = async (req: Request, res: Response): Promise<any> => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-        if (req.user.tipoUsuario !== TipoUsuario.administrador) {
-            return res.status(403).json({ message: "Solo administradores pueden modificar promociones" });
-        }
-
         const id = parseInt(req.params.id);
-        const promocionExistente = await promocionRepository.findById(id);
-
-        if (!promocionExistente) {
-            return res.status(404).json({ message: "Promoción no encontrada" });
-        }
-
         const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion, activo } = req.body;
 
-        // Validar tipo de promoción si se proporciona
-        if (tipoPromocion) {
-            const tiposValidos = ["porcentaje", "precio_fijo", "combo"];
-            if (!tiposValidos.includes(tipoPromocion)) {
-                return res.status(400).json({ 
-                    message: "Tipo de promoción inválido",
-                    tipos_validos: tiposValidos
-                });
-            }
-        }
-
-        // Validar fechas si se proporcionan
-        if (fechaInicio || fechaFin) {
-            const inicio = fechaInicio ? new Date(fechaInicio) : new Date(promocionExistente.fechaInicio);
-            const fin = fechaFin ? new Date(fechaFin) : new Date(promocionExistente.fechaFin);
-
-            if (fin <= inicio) {
-                return res.status(400).json({ 
-                    message: "La fecha de fin debe ser posterior a la fecha de inicio"
-                });
-            }
-        }
-
-        const promocionActualizada: PromotionDto = {
-            nombre: nombre || promocionExistente.nombre,
-            descripcion: descripcion || promocionExistente.descripcion,
-            fechaInicio: fechaInicio ? new Date(fechaInicio) : promocionExistente.fechaInicio,
-            fechaFin: fechaFin ? new Date(fechaFin) : promocionExistente.fechaFin,
-            tipoPromocion: tipoPromocion || promocionExistente.tipoPromocion,
-            activo: activo !== undefined ? activo : promocionExistente.activo
+        const promocionData: Partial<PromocionDto> = {
+            ...(nombre && { nombre }),
+            ...(descripcion && { descripcion }),
+            ...(fechaInicio && { fechaInicio }),
+            ...(fechaFin && { fechaFin }),
+            ...(tipoPromocion && { tipoPromocion }),
+            ...(activo !== undefined && { activo })
         };
 
-        const promocionResult = await promocionRepository.update(id, promocionActualizada);
+        const promocionResult = await promocionService.updatePromocion(id, promocionData);
 
         if (!promocionResult) {
-            return res.status(404).json({ message: "No se pudo actualizar: promoción no encontrada" });
+            return res.status(404).json({ message: "Promoción no encontrada" });
         }
 
         res.json({
             message: "Promoción actualizada exitosamente",
             data: promocionResult
         });
-    } catch (error) {
-        res.status(400).json({ message: "Error al actualizar la promoción", error });
+    } catch (error: any) {
+        res.status(400).json({ message: "Error al actualizar la promoción", error: error.message });
     }
 };
 
-/**
- * CU52 - Eliminar una promoción
- * Solo administradores pueden eliminar promociones
- * Validaciones:
- * - La promoción debe existir
- */
+
 export const deletePromocion = async (req: Request, res: Response): Promise<any> => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No autenticado" });
-        }
-        if (!req.user.activo) {
-            return res.status(403).json({ message: "Usuario no activo" });
-        }
-        if (req.user.tipoUsuario !== TipoUsuario.administrador) {
-            return res.status(403).json({ message: "Solo administradores pueden eliminar promociones" });
-        }
-
         const id = parseInt(req.params.id);
-        const promocion = await promocionRepository.findById(id);
+        const deleted = await promocionService.deletePromocion(id);
 
-        if (!promocion) {
+        if (!deleted) {
             return res.status(404).json({ message: "Promoción no encontrada" });
         }
 
-        await promocionRepository.delete(id);
-
         res.json({ message: "Promoción eliminada correctamente" });
-    } catch (error) {
-        res.status(500).json({ message: "Error al eliminar la promoción", error });
+    } catch (error: any) {
+        res.status(500).json({ message: "Error al eliminar la promoción", error: error.message });
     }
 };
+
