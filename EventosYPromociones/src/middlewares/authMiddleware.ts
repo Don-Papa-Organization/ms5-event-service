@@ -21,7 +21,6 @@ export function extractToken(req: Request): string | null {
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): any => {
 	try {
 		const token = extractToken(req);
-		console.log(token)
 		if (!token) {
 			return res.status(401).json({ message: "No se proporcionó access token" });
 		}

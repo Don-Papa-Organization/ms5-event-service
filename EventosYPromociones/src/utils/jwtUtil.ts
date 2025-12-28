@@ -4,7 +4,7 @@ import { JwtUserPayload } from "../interfaces/jwtUserPayloadI";
 const JWT_SECRET = process.env.JWT_SECRET! || "tu_super_secreto_jwt_development_very_secure_key_12345";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET! || "tu_super_secreto_jwt_development_very_secure_key_12345";
 
-export const generateAccesToken = (payload: Object):string => {
+export const generateAccessToken = (payload: Object):string => {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
 }
 
