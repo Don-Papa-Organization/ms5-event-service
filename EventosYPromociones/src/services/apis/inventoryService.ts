@@ -15,16 +15,16 @@ export class InventoryService {
 
   constructor() {
     this.inventoryBaseUrl = process.env.INVENTORY_SERVICE_URL || 'http://inventory-service-app:4001/api';
-    this.internalToken = process.env.INTERNAL_SERVICE_TOKEN;
+    //this.internalToken = process.env.INTERNAL_SERVICE_TOKEN;
 
     const headers: any = {
       'Content-Type': 'application/json',
     };
 
     // Solo agregar x-internal-token si está configurado
-    if (this.internalToken) {
-      headers['x-internal-token'] = this.internalToken;
-    }
+    // if (this.internalToken) {
+    //   headers['x-internal-token'] = this.internalToken;
+    // }
 
     this.axiosInstance = axios.create({
       baseURL: this.inventoryBaseUrl,
