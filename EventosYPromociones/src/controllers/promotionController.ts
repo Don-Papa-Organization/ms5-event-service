@@ -119,3 +119,31 @@ export const deletePromocion = async (req: Request, res: Response): Promise<any>
     }
 };
 
+/**
+ * Cambiar estado activo de una promoción
+ * Acceso: Solo Administrador
+ */
+export const togglePromocionActiva = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const id = parseInt(req.params.id);
+        const { activo } = req.body;
+
+        if (activo === undefined || typeof activo !== 'boolean') {
+            return res.status(400).json({ message: "El campo 'activo' es requerido y debe ser boolean" });
+        }
+
+        const promocionActualizada = await promocionService.togglePromocionActiva(id, activo);
+
+        if (!promocionActualizada) {
+            return res.status(404).json({ message: "Promoción no encontrada" });
+        }
+
+        res.json({
+            message: `Promoción ${activo ? 'activada' : 'desactivada'} exitosamente`,
+            data: promocionActualizada
+        });
+    } catch (error: any) {
+        res.status(400).json({ message: "Error al cambiar estado de la promoción", error: error.message });
+    }
+};
+

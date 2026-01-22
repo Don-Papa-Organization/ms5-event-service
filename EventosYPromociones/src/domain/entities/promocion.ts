@@ -39,7 +39,7 @@ export class Promocion extends Model {
     fechaFin!: Date;
 
     @Column({
-        type: DataType.ENUM('porcentaje', 'precio_fijo', 'combo'),
+        type: DataType.ENUM('porcentaje', 'precio_fijo'),
         allowNull: false
     })
     tipoPromocion!: string;

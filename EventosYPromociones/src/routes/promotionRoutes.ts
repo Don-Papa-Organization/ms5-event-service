@@ -6,6 +6,7 @@ import {
     createPromocion,
     updatePromocion,
     deletePromocion,
+    togglePromocionActiva,
 } from "../controllers/promotionController";
 import { authenticateToken, requireUsuarioActivo, requireRoles } from "../middlewares/authMiddleware";
 import { TipoUsuario } from "../types/express";
@@ -51,5 +52,11 @@ router.put("/:id", requireRoles(TipoUsuario.administrador), updatePromocion);
  * Acceso: Solo Administrador
  */
 router.delete("/:id", requireRoles(TipoUsuario.administrador), deletePromocion);
+
+/**
+ * Cambiar estado activo de una promoción
+ * Acceso: Solo Administrador
+ */
+router.patch("/:id/toggle-active", requireRoles(TipoUsuario.administrador), togglePromocionActiva);
 
 export default router;

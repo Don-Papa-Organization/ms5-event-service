@@ -48,7 +48,7 @@ export class PromocionService {
     }
 
     // Validar tipo de promoción
-    const tiposValidos = ["porcentaje", "precio_fijo", "combo"];
+    const tiposValidos = ["porcentaje", "precio_fijo"];
     if (!tiposValidos.includes(data.tipoPromocion)) {
       throw new Error(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`);
     }
@@ -84,7 +84,7 @@ export class PromocionService {
 
     // Validar tipo de promoción si se proporciona
     if (data.tipoPromocion) {
-      const tiposValidos = ["porcentaje", "precio_fijo", "combo"];
+      const tiposValidos = ["porcentaje", "precio_fijo"];
       if (!tiposValidos.includes(data.tipoPromocion)) {
         throw new Error(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`);
       }
@@ -137,5 +137,20 @@ export class PromocionService {
    */
   async removerProductoDePromocion(idProductoPromocion: number): Promise<boolean> {
     return this.productoPromocionService.deleteProductoPromocion(idProductoPromocion);
+  }
+
+  /**
+   * Cambiar estado activo de una promoción
+   * @param idPromocion ID de la promoción
+   * @param activo Nuevo estado (true/false)
+   * @returns Promoción actualizada
+   */
+  async togglePromocionActiva(idPromocion: number, activo: boolean): Promise<Promocion | null> {
+    const promocionExiste = await this.promocionRepository.findById(idPromocion);
+    if (!promocionExiste) {
+      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+    }
+
+    return this.promocionRepository.update(idPromocion, { activo });
   }
 }

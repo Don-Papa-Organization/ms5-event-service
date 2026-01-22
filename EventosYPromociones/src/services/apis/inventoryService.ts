@@ -5,9 +5,6 @@ import { Request, Response } from 'express';
  * Realiza llamadas HTTP al microservicio de inventario para obtener y gestionar productos
  */
 
-
-
-
 export class InventoryService {
   private axiosInstance: AxiosInstance;
   private inventoryBaseUrl: string;
@@ -20,11 +17,6 @@ export class InventoryService {
     const headers: any = {
       'Content-Type': 'application/json',
     };
-
-    // Solo agregar x-internal-token si está configurado
-    // if (this.internalToken) {
-    //   headers['x-internal-token'] = this.internalToken;
-    // }
 
     this.axiosInstance = axios.create({
       baseURL: this.inventoryBaseUrl,

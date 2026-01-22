@@ -4,6 +4,6 @@ export interface PromocionDto {
   descripcion: string;
   fechaInicio: Date;
   fechaFin: Date;
-  tipoPromocion: 'porcentaje' | 'precio_fijo' | 'combo';
+  tipoPromocion: 'porcentaje' | 'precio_fijo';
   activo: boolean;
 }
