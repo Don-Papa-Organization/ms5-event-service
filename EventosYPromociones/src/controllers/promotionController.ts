@@ -1,149 +1,158 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { PromocionService } from "../services/promocionService";
-import { PromocionDto } from "../domain/dto/promocionDto";
-import { TipoUsuario } from "../types/express";
+import { CreatePromocionRequestDto } from "../domain/dtos/request/CreatePromocion.Request.dto";
+import { UpdatePromocionRequestDto } from "../domain/dtos/request/UpdatePromocion.Request.dto";
+import { ApiResponse } from "../types";
+import { AppError } from "../middlewares/error.middleware";
 
 const promocionService = new PromocionService();
 
+export const getPromocionesActivas = async (req: Request, res: Response, next: NextFunction) => {
+	const activas = req.params.activas === "true";
+	const promociones = await promocionService.getPromocionesActivas(activas);
 
-export const getPromocionesActivas = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const activas = req.params.activas === "true";
-        const promociones = await promocionService.getPromocionesActivas(activas);
-
-        if (!promociones || promociones.length === 0) {
-            return res.json({ message: "No hay promociones disponibles", data: [] });
-        }
-
-        res.json(promociones);
-    } catch (error) {
-        res.status(500).json({ message: "Error al obtener promociones activas", error });
-    }
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promociones.length > 0 ? promociones : [],
+		message: promociones.length > 0 ? "Promociones obtenidas correctamente" : "No hay promociones disponibles",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 
 /**
  * Obtener todas las promociones (admin y empleados)
  */
-export const getPromociones = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const promociones = await promocionService.getAllPromociones();
-        res.json(promociones);
-    } catch (error) {
-        res.status(500).json({ message: "Error al obtener promociones", error });
-    }
+export const getPromociones = async (req: Request, res: Response, next: NextFunction) => {
+	const promociones = await promocionService.getAllPromociones();
+	
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promociones,
+		message: "Promociones obtenidas correctamente",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 
 /**
  * Obtener una promoción por ID (admin y empleados)
  */
-export const getPromocionById = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const promocion = await promocionService.getPromocionById(parseInt(req.params.id));
-        if (!promocion) {
-            return res.status(404).json({ message: "Promoción no encontrada" });
-        }
+export const getPromocionById = async (req: Request, res: Response, next: NextFunction) => {
+	const promocion = await promocionService.getPromocionById(parseInt(req.params.id));
+	
+	if (!promocion) {
+		throw new AppError("Promoción no encontrada", 404);
+	}
 
-        res.json(promocion);
-    } catch (error) {
-        res.status(500).json({ message: "Error al obtener la promoción", error });
-    }
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promocion,
+		message: "Promoción obtenida correctamente",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 
+export const createPromocion = async (req: Request, res: Response, next: NextFunction) => {
+	const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion }: CreatePromocionRequestDto = req.body;
 
-export const createPromocion = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion, activo } = req.body;
+	const promocionData = {
+		nombre,
+		descripcion,
+		fechaInicio,
+		fechaFin,
+		tipoPromocion,
+		activo: true
+	};
 
-        const promocionData: PromocionDto = {
-            nombre,
-            descripcion,
-            fechaInicio,
-            fechaFin,
-            tipoPromocion,
-            activo: activo !== undefined ? activo : true
-        };
-
-        const promocionGuardada = await promocionService.createPromocion(promocionData);
-        res.status(201).json({
-            message: "Promoción creada exitosamente",
-            data: promocionGuardada
-        });
-    } catch (error: any) {
-        res.status(400).json({ message: "Error al crear la promoción", error: error.message });
-    }
+	const promocionGuardada = await promocionService.createPromocion(promocionData);
+	
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promocionGuardada,
+		message: "Promoción creada exitosamente",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(201).json(response);
 };
 
+export const updatePromocion = async (req: Request, res: Response, next: NextFunction) => {
+	const id = parseInt(req.params.id);
+	const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion, activo }: UpdatePromocionRequestDto = req.body;
 
-export const updatePromocion = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const id = parseInt(req.params.id);
-        const { nombre, descripcion, fechaInicio, fechaFin, tipoPromocion, activo } = req.body;
+	const promocionData: Partial<any> = {
+		...(nombre && { nombre }),
+		...(descripcion && { descripcion }),
+		...(fechaInicio && { fechaInicio }),
+		...(fechaFin && { fechaFin }),
+		...(tipoPromocion && { tipoPromocion }),
+		...(activo !== undefined && { activo })
+	};
 
-        const promocionData: Partial<PromocionDto> = {
-            ...(nombre && { nombre }),
-            ...(descripcion && { descripcion }),
-            ...(fechaInicio && { fechaInicio }),
-            ...(fechaFin && { fechaFin }),
-            ...(tipoPromocion && { tipoPromocion }),
-            ...(activo !== undefined && { activo })
-        };
+	const promocionResult = await promocionService.updatePromocion(id, promocionData);
 
-        const promocionResult = await promocionService.updatePromocion(id, promocionData);
+	if (!promocionResult) {
+		throw new AppError("Promoción no encontrada", 404);
+	}
 
-        if (!promocionResult) {
-            return res.status(404).json({ message: "Promoción no encontrada" });
-        }
-
-        res.json({
-            message: "Promoción actualizada exitosamente",
-            data: promocionResult
-        });
-    } catch (error: any) {
-        res.status(400).json({ message: "Error al actualizar la promoción", error: error.message });
-    }
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promocionResult,
+		message: "Promoción actualizada exitosamente",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 
+export const deletePromocion = async (req: Request, res: Response, next: NextFunction) => {
+	const id = parseInt(req.params.id);
+	const deleted = await promocionService.deletePromocion(id);
 
-export const deletePromocion = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const id = parseInt(req.params.id);
-        const deleted = await promocionService.deletePromocion(id);
+	if (!deleted) {
+		throw new AppError("Promoción no encontrada", 404);
+	}
 
-        if (!deleted) {
-            return res.status(404).json({ message: "Promoción no encontrada" });
-        }
-
-        res.json({ message: "Promoción eliminada correctamente" });
-    } catch (error: any) {
-        res.status(500).json({ message: "Error al eliminar la promoción", error: error.message });
-    }
+	const response: ApiResponse<null> = {
+		success: true,
+		data: null,
+		message: "Promoción eliminada correctamente",
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 
 /**
  * Cambiar estado activo de una promoción
  * Acceso: Solo Administrador
  */
-export const togglePromocionActiva = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const id = parseInt(req.params.id);
-        const { activo } = req.body;
+export const togglePromocionActiva = async (req: Request, res: Response, next: NextFunction) => {
+	const id = parseInt(req.params.id);
+	const { activo } = req.body;
 
-        if (activo === undefined || typeof activo !== 'boolean') {
-            return res.status(400).json({ message: "El campo 'activo' es requerido y debe ser boolean" });
-        }
+	if (activo === undefined || typeof activo !== 'boolean') {
+		throw new AppError("El campo 'activo' es requerido y debe ser boolean", 400);
+	}
 
-        const promocionActualizada = await promocionService.togglePromocionActiva(id, activo);
+	const promocionActualizada = await promocionService.togglePromocionActiva(id, activo);
 
-        if (!promocionActualizada) {
-            return res.status(404).json({ message: "Promoción no encontrada" });
-        }
+	if (!promocionActualizada) {
+		throw new AppError("Promoción no encontrada", 404);
+	}
 
-        res.json({
-            message: `Promoción ${activo ? 'activada' : 'desactivada'} exitosamente`,
-            data: promocionActualizada
-        });
-    } catch (error: any) {
-        res.status(400).json({ message: "Error al cambiar estado de la promoción", error: error.message });
-    }
+	const response: ApiResponse<any> = {
+		success: true,
+		data: promocionActualizada,
+		message: `Promoción ${activo ? 'activada' : 'desactivada'} exitosamente`,
+		timestamp: new Date().toISOString()
+	};
+	
+	res.status(200).json(response);
 };
 

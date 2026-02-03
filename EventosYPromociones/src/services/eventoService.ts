@@ -3,7 +3,7 @@ import { EventoDiaSemanaRepository } from "../domain/repositories/eventoDiaSeman
 import { PromocionEventoDiaRepository } from "../domain/repositories/promocionEventoDiaRepository";
 import { PromocionRepository } from "../domain/repositories/promocionRepository";
 import { Evento } from "../domain/entities";
-import { EventoDto } from "../domain/dto/eventoDto";
+import { EventoDto } from "../domain/dtos/eventoDto";
 
 export class EventoService {
   private eventoRepository: EventoRepository;

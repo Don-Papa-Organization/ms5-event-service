@@ -2,7 +2,7 @@ import { ProductoPromocionRepository } from "../domain/repositories/productoProm
 import { PromocionRepository } from "../domain/repositories/promocionRepository";
 import { InventoryService } from "./apis/inventoryService";
 import { ProductoPromocion } from "../domain/entities";
-import { ProductoPromocionDto } from "../domain/dto/productoPromocionDto";
+import { ProductoPromocionDto } from "../domain/dtos/productoPromocionDto";
 
 export class ProductoPromocionService {
   private productoPromocionRepository: ProductoPromocionRepository;

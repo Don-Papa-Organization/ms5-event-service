@@ -1,8 +1,8 @@
 import { PromocionRepository } from "../domain/repositories/promocionRepository";
 import { ProductoPromocionService } from "./productoPromocionService";
 import { Promocion } from "../domain/entities";
-import { PromocionDto } from "../domain/dto/promocionDto";
-import { ProductoPromocionDto } from "../domain/dto/productoPromocionDto";
+import { PromocionDto } from "../domain/dtos/promocionDto";
+import { ProductoPromocionDto } from "../domain/dtos/productoPromocionDto";
 
 export class PromocionService {
   private promocionRepository: PromocionRepository;
