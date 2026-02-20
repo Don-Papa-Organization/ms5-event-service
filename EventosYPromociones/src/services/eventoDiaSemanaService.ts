@@ -5,6 +5,7 @@ import { PromocionRepository } from "../domain/repositories/promocionRepository"
 import { EventoDiaSemana } from "../domain/entities";
 import { EventoDiaSemanaDto } from "../domain/dtos/eventoDiaSemanaDto";
 import { PromocionEventoDiaDto } from "../domain/dtos/promocionEventoDiaDto";
+import { AppError } from "../middlewares/error.middleware";
 
 export class EventoDiaSemanaService {
   private eventoDiaSemanaRepository: EventoDiaSemanaRepository;
@@ -99,12 +100,12 @@ export class EventoDiaSemanaService {
   async createEventoDiaSemana(data: EventoDiaSemanaDto): Promise<EventoDiaSemana> {
     // Validar campos obligatorios
     if (!data.horaInicio || !data.horaFin || !data.fecha || !data.idEvento) {
-      throw new Error("Campos obligatorios: horaInicio, horaFin, fecha, idEvento");
+      throw new AppError("Campos obligatorios: horaInicio, horaFin, fecha, idEvento", 400);
     }
 
     // Validar que horaInicio < horaFin
     if (data.horaInicio >= data.horaFin) {
-      throw new Error("La hora de inicio debe ser menor a la hora de fin");
+      throw new AppError("La hora de inicio debe ser menor a la hora de fin", 400);
     }
 
     return this.eventoDiaSemanaRepository.create(data);
@@ -116,12 +117,12 @@ export class EventoDiaSemanaService {
   async updateEventoDiaSemana(idEventoSemana: number, data: Partial<EventoDiaSemanaDto>): Promise<EventoDiaSemana | null> {
     const eventoExiste = await this.eventoDiaSemanaRepository.findById(idEventoSemana);
     if (!eventoExiste) {
-      throw new Error(`Evento de día de semana con ID ${idEventoSemana} no encontrado`);
+      throw new AppError(`Evento de día de semana con ID ${idEventoSemana} no encontrado`, 404);
     }
 
     // Validar horas si se proporcionan
     if (data.horaInicio && data.horaFin && data.horaInicio >= data.horaFin) {
-      throw new Error("La hora de inicio debe ser menor a la hora de fin");
+      throw new AppError("La hora de inicio debe ser menor a la hora de fin", 400);
     }
 
     return this.eventoDiaSemanaRepository.update(idEventoSemana, data);
@@ -133,7 +134,7 @@ export class EventoDiaSemanaService {
   async deleteEventoDiaSemana(idEventoSemana: number): Promise<boolean> {
     const eventoExiste = await this.eventoDiaSemanaRepository.findById(idEventoSemana);
     if (!eventoExiste) {
-      throw new Error(`Evento de día de semana con ID ${idEventoSemana} no encontrado`);
+      throw new AppError(`Evento de día de semana con ID ${idEventoSemana} no encontrado`, 404);
     }
 
     // Eliminar relaciones con promociones
@@ -152,7 +153,7 @@ export class EventoDiaSemanaService {
     // Validar que el evento de día de semana existe
     const eventoDia = await this.eventoDiaSemanaRepository.findById(data.idEventoDiaSemana);
     if (!eventoDia) {
-      throw new Error(`Evento de día de semana con ID ${data.idEventoDiaSemana} no encontrado`);
+      throw new AppError(`Evento de día de semana con ID ${data.idEventoDiaSemana} no encontrado`, 404);
     }
 
     return this.promocionEventoDiaRepository.create(data);
@@ -164,7 +165,7 @@ export class EventoDiaSemanaService {
   async getPromocionesDeEventoDia(idEventoDiaSemana: number): Promise<any[]> {
     const eventoDia = await this.eventoDiaSemanaRepository.findById(idEventoDiaSemana);
     if (!eventoDia) {
-      throw new Error(`Evento de día de semana con ID ${idEventoDiaSemana} no encontrado`);
+      throw new AppError(`Evento de día de semana con ID ${idEventoDiaSemana} no encontrado`, 404);
     }
 
     return this.promocionEventoDiaRepository.findByEventoDiaSemana(idEventoDiaSemana);

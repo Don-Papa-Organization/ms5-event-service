@@ -35,7 +35,8 @@ export class InventoryService {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
       const response = await this.axiosInstance.get('/products', { headers });
-      return response.data;
+      const payload = response.data?.data ?? response.data;
+      return payload?.productos ?? payload ?? [];
     } catch (error: any) {
       console.error('Error al obtener productos:', error.message);
       throw new Error(`No se pudo conectar con el servicio de inventario: ${error.message}`);
@@ -52,7 +53,7 @@ export class InventoryService {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
       const response = await this.axiosInstance.get(`/products/${idProducto}`, { headers });
-      return response.data;
+      return response.data?.data ?? response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;

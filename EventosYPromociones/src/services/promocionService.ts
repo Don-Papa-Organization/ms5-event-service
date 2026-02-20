@@ -3,6 +3,7 @@ import { ProductoPromocionService } from "./productoPromocionService";
 import { Promocion } from "../domain/entities";
 import { PromocionDto } from "../domain/dtos/promocionDto";
 import { ProductoPromocionDto } from "../domain/dtos/productoPromocionDto";
+import { AppError } from "../middlewares/error.middleware";
 
 export class PromocionService {
   private promocionRepository: PromocionRepository;
@@ -44,13 +45,13 @@ export class PromocionService {
   async createPromocion(data: PromocionDto): Promise<Promocion> {
     // Validar campos obligatorios
     if (!data.nombre || !data.descripcion || !data.fechaInicio || !data.fechaFin || !data.tipoPromocion) {
-      throw new Error("Campos obligatorios: nombre, descripcion, fechaInicio, fechaFin, tipoPromocion");
+      throw new AppError("Campos obligatorios: nombre, descripcion, fechaInicio, fechaFin, tipoPromocion", 400);
     }
 
     // Validar tipo de promoción
     const tiposValidos = ["porcentaje", "precio_fijo"];
     if (!tiposValidos.includes(data.tipoPromocion)) {
-      throw new Error(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`);
+      throw new AppError(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`, 400);
     }
 
     // Validar fechas
@@ -58,7 +59,7 @@ export class PromocionService {
     const fin = new Date(data.fechaFin);
 
     if (fin <= inicio) {
-      throw new Error("La fecha de fin debe ser posterior a la fecha de inicio");
+      throw new AppError("La fecha de fin debe ser posterior a la fecha de inicio", 400);
     }
 
     return this.promocionRepository.create(data);
@@ -70,7 +71,7 @@ export class PromocionService {
   async updatePromocion(idPromocion: number, data: Partial<PromocionDto>): Promise<Promocion | null> {
     const promocionExiste = await this.promocionRepository.findById(idPromocion);
     if (!promocionExiste) {
-      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${idPromocion} no encontrada`, 404);
     }
 
     // Validar fechas si se proporcionan
@@ -78,7 +79,7 @@ export class PromocionService {
       const inicio = new Date(data.fechaInicio);
       const fin = new Date(data.fechaFin);
       if (fin <= inicio) {
-        throw new Error("La fecha de fin debe ser posterior a la fecha de inicio");
+        throw new AppError("La fecha de fin debe ser posterior a la fecha de inicio", 400);
       }
     }
 
@@ -86,7 +87,7 @@ export class PromocionService {
     if (data.tipoPromocion) {
       const tiposValidos = ["porcentaje", "precio_fijo"];
       if (!tiposValidos.includes(data.tipoPromocion)) {
-        throw new Error(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`);
+        throw new AppError(`Tipo de promoción inválido. Válidos: ${tiposValidos.join(", ")}`, 400);
       }
     }
 
@@ -99,7 +100,7 @@ export class PromocionService {
   async deletePromocion(idPromocion: number): Promise<boolean> {
     const promocionExiste = await this.promocionRepository.findById(idPromocion);
     if (!promocionExiste) {
-      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${idPromocion} no encontrada`, 404);
     }
 
     // Eliminar productos de la promoción usando el servicio
@@ -148,7 +149,7 @@ export class PromocionService {
   async togglePromocionActiva(idPromocion: number, activo: boolean): Promise<Promocion | null> {
     const promocionExiste = await this.promocionRepository.findById(idPromocion);
     if (!promocionExiste) {
-      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${idPromocion} no encontrada`, 404);
     }
 
     return this.promocionRepository.update(idPromocion, { activo });

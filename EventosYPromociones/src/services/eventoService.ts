@@ -4,6 +4,7 @@ import { PromocionEventoDiaRepository } from "../domain/repositories/promocionEv
 import { PromocionRepository } from "../domain/repositories/promocionRepository";
 import { Evento } from "../domain/entities";
 import { EventoDto } from "../domain/dtos/eventoDto";
+import { AppError } from "../middlewares/error.middleware";
 
 export class EventoService {
   private eventoRepository: EventoRepository;
@@ -47,7 +48,7 @@ export class EventoService {
   async createEvento(data: EventoDto): Promise<Evento> {
     // Validar campos obligatorios
     if (!data.nombre || !data.descripcion) {
-      throw new Error("Nombre y descripción son campos obligatorios");
+      throw new AppError("Nombre y descripción son campos obligatorios", 400);
     }
 
     return this.eventoRepository.create(data);
@@ -59,7 +60,7 @@ export class EventoService {
   async updateEvento(idEvento: number, data: Partial<EventoDto>): Promise<Evento | null> {
     const eventoExiste = await this.eventoRepository.findById(idEvento);
     if (!eventoExiste) {
-      throw new Error(`Evento con ID ${idEvento} no encontrado`);
+      throw new AppError(`Evento con ID ${idEvento} no encontrado`, 404);
     }
 
     return this.eventoRepository.update(idEvento, data);
@@ -72,7 +73,7 @@ export class EventoService {
   async deleteEvento(idEvento: number): Promise<boolean> {
     const eventoExiste = await this.eventoRepository.findById(idEvento);
     if (!eventoExiste) {
-      throw new Error(`Evento con ID ${idEvento} no encontrado`);
+      throw new AppError(`Evento con ID ${idEvento} no encontrado`, 404);
     }
 
     // Eliminar registros de eventoDiaSemana asociados

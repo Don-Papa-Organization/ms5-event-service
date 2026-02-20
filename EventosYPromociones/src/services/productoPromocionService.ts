@@ -3,6 +3,7 @@ import { PromocionRepository } from "../domain/repositories/promocionRepository"
 import { InventoryService } from "./apis/inventoryService";
 import { ProductoPromocion } from "../domain/entities";
 import { ProductoPromocionDto } from "../domain/dtos/productoPromocionDto";
+import { AppError } from "../middlewares/error.middleware";
 
 export class ProductoPromocionService {
   private productoPromocionRepository: ProductoPromocionRepository;
@@ -13,6 +14,23 @@ export class ProductoPromocionService {
     this.productoPromocionRepository = new ProductoPromocionRepository();
     this.promocionRepository = new PromocionRepository();
     this.inventoryService = new InventoryService();
+  }
+
+  private resolvePrecioProducto(detalleProducto: any): number | null {
+    const posiblesCampos = ["precio", "price", "precioUnitario", "valor", "valorUnitario"];
+    for (const campo of posiblesCampos) {
+      const valor = detalleProducto?.[campo];
+      if (typeof valor === "number" && !Number.isNaN(valor)) {
+        return valor;
+      }
+    }
+    return null;
+  }
+
+  private calcularPrecioPromocional(precioBase: number, porcentaje: number): number {
+    const factor = 1 - porcentaje / 100;
+    const precio = precioBase * factor;
+    return Math.max(0, Math.round(precio * 100) / 100);
   }
 
   /**
@@ -38,7 +56,7 @@ export class ProductoPromocionService {
     // Validar que la promoción existe
     const promocion = await this.promocionRepository.findById(idPromocion);
     if (!promocion) {
-      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${idPromocion} no encontrada`, 404);
     }
 
     // Obtener productos de la promoción
@@ -71,39 +89,67 @@ export class ProductoPromocionService {
   async createProductoPromocion(data: ProductoPromocionDto, accessToken?: string): Promise<ProductoPromocion> {
     // Validar campos obligatorios
     if (!data.idProducto || !data.idPromocion || !data.cantidadMinima) {
-      throw new Error("Campos obligatorios: idProducto, idPromocion, cantidadMinima");
+      throw new AppError("Campos obligatorios: idProducto, idPromocion, cantidadMinima", 400);
     }
 
     // Validar que la promoción existe
     const promocion = await this.promocionRepository.findById(data.idPromocion);
     if (!promocion) {
-      throw new Error(`Promoción con ID ${data.idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${data.idPromocion} no encontrada`, 404);
     }
 
     // Validar que el producto existe en inventario
     const productoExiste = await this.inventoryService.productoExists(data.idProducto, accessToken);
     if (!productoExiste) {
-      throw new Error(`Producto con ID ${data.idProducto} no existe en inventario`);
+      throw new AppError(`Producto con ID ${data.idProducto} no existe en inventario`, 404);
     }
 
     // Validar cantidadMinima
     if (data.cantidadMinima <= 0) {
-      throw new Error("La cantidad mínima debe ser mayor a 0");
+      throw new AppError("La cantidad mínima debe ser mayor a 0", 400);
     }
 
     // Validar que al menos uno de los descuentos está presente
     if (
-      !data.precioPromocional &&
+      (data.precioPromocional === undefined || data.precioPromocional === null) &&
       (data.porcentajeDescuento === undefined || data.porcentajeDescuento === null)
     ) {
-      throw new Error("Debe proporcionar precioPromocional o porcentajeDescuento");
+      throw new AppError("Debe proporcionar precioPromocional o porcentajeDescuento", 400);
+    }
+
+    // No permitir ambos al mismo tiempo
+    if (
+      data.precioPromocional !== undefined &&
+      data.precioPromocional !== null &&
+      data.porcentajeDescuento !== undefined &&
+      data.porcentajeDescuento !== null
+    ) {
+      throw new AppError("No puede enviar precioPromocional y porcentajeDescuento al mismo tiempo", 400);
     }
 
     // Validar porcentaje
     if (data.porcentajeDescuento !== undefined && data.porcentajeDescuento !== null) {
       if (data.porcentajeDescuento < 0 || data.porcentajeDescuento > 100) {
-        throw new Error("El porcentaje de descuento debe estar entre 0 y 100");
+        throw new AppError("El porcentaje de descuento debe estar entre 0 y 100", 400);
       }
+    }
+
+    // Si viene porcentaje, calcular precioPromocional usando precio del producto
+    if (data.porcentajeDescuento !== undefined && data.porcentajeDescuento !== null) {
+      const detalleProducto = await this.inventoryService.getProductoById(data.idProducto, accessToken);
+      if (!detalleProducto) {
+        throw new AppError(`Producto con ID ${data.idProducto} no existe en inventario`, 404);
+      }
+      const precioBase = this.resolvePrecioProducto(detalleProducto);
+      if (precioBase === null) {
+        throw new AppError("No se pudo obtener el precio del producto desde inventario", 400);
+      }
+      data.precioPromocional = this.calcularPrecioPromocional(precioBase, data.porcentajeDescuento);
+    }
+
+    // Si viene precioPromocional, forzar porcentajeDescuento a 0
+    if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+      data.porcentajeDescuento = 0;
     }
 
     return this.productoPromocionRepository.create(data);
@@ -115,27 +161,56 @@ export class ProductoPromocionService {
   async updateProductoPromocion(idProductoPromocion: number, data: Partial<ProductoPromocionDto>, accessToken?: string): Promise<ProductoPromocion | null> {
     const productoExiste = await this.productoPromocionRepository.findById(idProductoPromocion);
     if (!productoExiste) {
-      throw new Error(`Producto de promoción con ID ${idProductoPromocion} no encontrado`);
+      throw new AppError(`Producto de promoción con ID ${idProductoPromocion} no encontrado`, 404);
     }
 
     // Si se intenta cambiar el producto, validar que existe en inventario
     if (data.idProducto) {
       const productoExisteEnInventario = await this.inventoryService.productoExists(data.idProducto, accessToken);
       if (!productoExisteEnInventario) {
-        throw new Error(`Producto con ID ${data.idProducto} no existe en inventario`);
+        throw new AppError(`Producto con ID ${data.idProducto} no existe en inventario`, 404);
       }
     }
 
     // Validar cantidadMinima si se proporciona
     if (data.cantidadMinima !== undefined && data.cantidadMinima <= 0) {
-      throw new Error("La cantidad mínima debe ser mayor a 0");
+      throw new AppError("La cantidad mínima debe ser mayor a 0", 400);
     }
 
     // Validar porcentaje si se proporciona
     if (data.porcentajeDescuento !== undefined && data.porcentajeDescuento !== null) {
       if (data.porcentajeDescuento < 0 || data.porcentajeDescuento > 100) {
-        throw new Error("El porcentaje de descuento debe estar entre 0 y 100");
+        throw new AppError("El porcentaje de descuento debe estar entre 0 y 100", 400);
       }
+    }
+
+    // No permitir ambos al mismo tiempo
+    if (
+      data.precioPromocional !== undefined &&
+      data.precioPromocional !== null &&
+      data.porcentajeDescuento !== undefined &&
+      data.porcentajeDescuento !== null
+    ) {
+      throw new AppError("No puede enviar precioPromocional y porcentajeDescuento al mismo tiempo", 400);
+    }
+
+    // Si viene porcentaje, calcular precioPromocional usando precio del producto
+    if (data.porcentajeDescuento !== undefined && data.porcentajeDescuento !== null) {
+      const idProducto = data.idProducto ?? productoExiste.idProducto;
+      const detalleProducto = await this.inventoryService.getProductoById(idProducto, accessToken);
+      if (!detalleProducto) {
+        throw new AppError(`Producto con ID ${idProducto} no existe en inventario`, 404);
+      }
+      const precioBase = this.resolvePrecioProducto(detalleProducto);
+      if (precioBase === null) {
+        throw new AppError("No se pudo obtener el precio del producto desde inventario", 400);
+      }
+      data.precioPromocional = this.calcularPrecioPromocional(precioBase, data.porcentajeDescuento);
+    }
+
+    // Si viene precioPromocional, forzar porcentajeDescuento a 0
+    if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+      data.porcentajeDescuento = 0;
     }
 
     return this.productoPromocionRepository.update(idProductoPromocion, data);
@@ -147,7 +222,7 @@ export class ProductoPromocionService {
   async deleteProductoPromocion(idProductoPromocion: number): Promise<boolean> {
     const productoExiste = await this.productoPromocionRepository.findById(idProductoPromocion);
     if (!productoExiste) {
-      throw new Error(`Producto de promoción con ID ${idProductoPromocion} no encontrado`);
+      throw new AppError(`Producto de promoción con ID ${idProductoPromocion} no encontrado`, 404);
     }
 
     return this.productoPromocionRepository.delete(idProductoPromocion);
@@ -161,7 +236,7 @@ export class ProductoPromocionService {
   async getProductosPromocionEnriquecidos(idPromocion: number, accessToken?: string): Promise<any> {
     const promocion = await this.promocionRepository.findById(idPromocion);
     if (!promocion) {
-      throw new Error(`Promoción con ID ${idPromocion} no encontrada`);
+      throw new AppError(`Promoción con ID ${idPromocion} no encontrada`, 404);
     }
 
     const productosPromocion = await this.getProductosByPromocion(idPromocion, accessToken);
@@ -183,7 +258,7 @@ export class ProductoPromocionService {
       // Validar que el producto existe en inventario
       const producto = await this.inventoryService.getProductoById(idProducto, accessToken);
       if (!producto) {
-        throw new Error(`Producto con ID ${idProducto} no existe en inventario`);
+        throw new AppError(`Producto con ID ${idProducto} no existe en inventario`, 404);
       }
 
       // Obtener todos los productos de promoción con este ID
