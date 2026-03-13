@@ -8,6 +8,8 @@ import {
   deleteProductoPromocion,
   getProductosPromocionEnriquecidos,
   getPromocionesDeProducto,
+  checkProductoPromocionActiva,
+  getActiveProductosPromocion,
 } from "../controllers/productoPromocionController";
 import { authenticateToken, requireUsuarioActivo, requireRoles } from "../middlewares/authMiddleware";
 import { TipoUsuario } from "../types/express";
@@ -20,6 +22,8 @@ router.use(authenticateToken, requireUsuarioActivo);
 router.get("/", getAllProductosPromocion);
 
 // Rutas específicas primero para evitar conflictos con ":id"
+router.get("/active-promotions", getActiveProductosPromocion);
+router.get("/check-active/:idProducto", checkProductoPromocionActiva);
 router.get("/promocion/:idPromocion/enriquecido", getProductosPromocionEnriquecidos);
 router.get("/promocion/:idPromocion", getProductosByPromocion);
 router.get("/producto/:idProducto/promociones", getPromocionesDeProducto);

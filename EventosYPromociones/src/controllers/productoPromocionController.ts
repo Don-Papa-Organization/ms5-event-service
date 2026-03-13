@@ -14,14 +14,14 @@ const productoPromocionService = new ProductoPromocionService();
  */
 export const getAllProductosPromocion = async (req: Request, res: Response, next: NextFunction) => {
   const productos = await productoPromocionService.getAllProductosPromocion();
-  
+
   const response: ApiResponse<any> = {
     success: true,
     data: productos,
     message: "Productos de promociones obtenidos correctamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -30,7 +30,7 @@ export const getAllProductosPromocion = async (req: Request, res: Response, next
  */
 export const getProductoPromocionById = async (req: Request, res: Response, next: NextFunction) => {
   const producto = await productoPromocionService.getProductoPromocionById(parseInt(req.params.id));
-  
+
   if (!producto) {
     throw new AppError("Producto de promoción no encontrado", 404);
   }
@@ -41,7 +41,7 @@ export const getProductoPromocionById = async (req: Request, res: Response, next
     message: "Producto de promoción obtenido correctamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -51,11 +51,11 @@ export const getProductoPromocionById = async (req: Request, res: Response, next
 export const getProductosByPromocion = async (req: Request, res: Response, next: NextFunction) => {
   const idPromocion = parseInt(req.params.idPromocion);
   const accessToken = extractToken(req);
-  
+
   if (!accessToken) {
     throw new AppError("Token de autenticación no proporcionado", 401);
   }
-  
+
   const productos = await productoPromocionService.getProductosByPromocion(idPromocion, accessToken);
 
   const response: ApiResponse<any> = {
@@ -68,7 +68,7 @@ export const getProductosByPromocion = async (req: Request, res: Response, next:
     message: "Productos de la promoción obtenidos correctamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -93,20 +93,20 @@ export const createProductoPromocion = async (req: Request, res: Response, next:
   };
 
   const accessToken = extractToken(req);
-  
+
   if (!accessToken) {
     throw new AppError("Token de autenticación no proporcionado", 401);
   }
-  
+
   const productoCreado = await productoPromocionService.createProductoPromocion(productoData, accessToken);
-  
+
   const response: ApiResponse<any> = {
     success: true,
     data: productoCreado,
     message: "Producto agregado a la promoción exitosamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(201).json(response);
 };
 
@@ -126,13 +126,13 @@ export const updateProductoPromocion = async (req: Request, res: Response, next:
   };
 
   const accessToken = extractToken(req);
-  
+
   if (!accessToken) {
     throw new AppError("Token de autenticación no proporcionado", 401);
   }
-  
+
   const productoActualizado = await productoPromocionService.updateProductoPromocion(id, productoData, accessToken);
-  
+
   if (!productoActualizado) {
     throw new AppError("Producto de promoción no encontrado", 404);
   }
@@ -143,7 +143,7 @@ export const updateProductoPromocion = async (req: Request, res: Response, next:
     message: "Producto de promoción actualizado exitosamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -165,7 +165,7 @@ export const deleteProductoPromocion = async (req: Request, res: Response, next:
     message: "Producto de promoción eliminado exitosamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -175,11 +175,11 @@ export const deleteProductoPromocion = async (req: Request, res: Response, next:
 export const getProductosPromocionEnriquecidos = async (req: Request, res: Response, next: NextFunction) => {
   const idPromocion = parseInt(req.params.idPromocion);
   const accessToken = extractToken(req);
-  
+
   if (!accessToken) {
     throw new AppError("Token de autenticación no proporcionado", 401);
   }
-  
+
   const data = await productoPromocionService.getProductosPromocionEnriquecidos(idPromocion, accessToken);
 
   const response: ApiResponse<any> = {
@@ -188,7 +188,7 @@ export const getProductosPromocionEnriquecidos = async (req: Request, res: Respo
     message: "Datos enriquecidos obtenidos correctamente",
     timestamp: new Date().toISOString()
   };
-  
+
   res.status(200).json(response);
 };
 
@@ -198,11 +198,11 @@ export const getProductosPromocionEnriquecidos = async (req: Request, res: Respo
 export const getPromocionesDeProducto = async (req: Request, res: Response, next: NextFunction) => {
   const idProducto = parseInt(req.params.idProducto);
   const accessToken = extractToken(req);
-  
+
   if (!accessToken) {
     throw new AppError("Token de autenticación no proporcionado", 401);
   }
-  
+
   const promociones = await productoPromocionService.getPromocionesDeProducto(idProducto, accessToken);
 
   const response: ApiResponse<any> = {
@@ -215,7 +215,40 @@ export const getPromocionesDeProducto = async (req: Request, res: Response, next
     message: "Promociones del producto obtenidas correctamente",
     timestamp: new Date().toISOString()
   };
-  
+
+  res.status(200).json(response);
+};
+
+/**
+   * Verificar si un producto tiene promoción activa
+   */
+export const checkProductoPromocionActiva = async (req: Request, res: Response, next: NextFunction) => {
+  const idProducto = parseInt(req.params.idProducto);
+  const result = await productoPromocionService.checkProductoPromocionActiva(idProducto);
+
+  const response: ApiResponse<any> = {
+    success: true,
+    data: result,
+    message: "Verificación de promoción completada",
+    timestamp: new Date().toISOString()
+  };
+
+  res.status(200).json(response);
+};
+
+/**
+ * Obtener todos los productos con promoción activa
+ */
+export const getActiveProductosPromocion = async (req: Request, res: Response, next: NextFunction) => {
+  const result = await productoPromocionService.getActiveProductosPromocion();
+
+  const response: ApiResponse<any> = {
+    success: true,
+    data: result,
+    message: "Productos con promoción activa obtenidos correctamente",
+    timestamp: new Date().toISOString()
+  };
+
   res.status(200).json(response);
 };
 

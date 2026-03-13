@@ -145,10 +145,8 @@ export class ProductoPromocionService {
         throw new AppError("No se pudo obtener el precio del producto desde inventario", 400);
       }
       data.precioPromocional = this.calcularPrecioPromocional(precioBase, data.porcentajeDescuento);
-    }
-
-    // Si viene precioPromocional, forzar porcentajeDescuento a 0
-    if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+    } else if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+      // Si SOLO viene precioPromocional, forzar porcentajeDescuento a 0
       data.porcentajeDescuento = 0;
     }
 
@@ -206,10 +204,8 @@ export class ProductoPromocionService {
         throw new AppError("No se pudo obtener el precio del producto desde inventario", 400);
       }
       data.precioPromocional = this.calcularPrecioPromocional(precioBase, data.porcentajeDescuento);
-    }
-
-    // Si viene precioPromocional, forzar porcentajeDescuento a 0
-    if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+    } else if (data.precioPromocional !== undefined && data.precioPromocional !== null) {
+      // Si SOLO viene precioPromocional, forzar porcentajeDescuento a 0
       data.porcentajeDescuento = 0;
     }
 
@@ -282,6 +278,82 @@ export class ProductoPromocionService {
       throw error;
     }
   }
+
+  /**
+   * Verificar si un producto específico tiene promoción activa
+   * @param idProducto ID del producto
+   * @returns Datos de la promoción si existe, o null
+   */
+  async checkProductoPromocionActiva(idProducto: number): Promise<any> {
+    try {
+      const productosPromocion = await this.productoPromocionRepository.findAll();
+      const productosDelProducto = productosPromocion.filter(pp => pp.idProducto === idProducto);
+
+      const ahora = new Date();
+
+      for (const pp of productosDelProducto) {
+        const promo = await this.promocionRepository.findById(pp.idPromocion);
+        if (promo && promo.activo) {
+          const fechaInicio = new Date(promo.fechaInicio);
+          const fechaFin = new Date(promo.fechaFin);
+
+          if (ahora >= fechaInicio && ahora <= fechaFin) {
+            return {
+              hasPromotion: true,
+              promotion: {
+                id: promo.idPromocion,
+                nombre: promo.nombre,
+                tipo: promo.tipoPromocion,
+                valor: pp.precioPromocional ?? pp.porcentajeDescuento,
+                cantidad_minima: pp.cantidadMinima,
+                fecha_inicio: promo.fechaInicio,
+                fecha_fin: promo.fechaFin
+              }
+            };
+          }
+        }
+      }
+
+      return { hasPromotion: false, promotion: null };
+    } catch (error: any) {
+      console.error(`Error al verificar promoción activa del producto ${idProducto}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener todos los IDs de productos con promoción activa
+   * @returns Array de productos con promoción asociada
+   */
+  async getActiveProductosPromocion(): Promise<any> {
+    try {
+      const productosPromocion = await this.productoPromocionRepository.findAll();
+      const ahora = new Date();
+
+      const activeProducts: any[] = [];
+
+      for (const pp of productosPromocion) {
+        const promo = await this.promocionRepository.findById(pp.idPromocion);
+        if (promo && promo.activo) {
+          const fechaInicio = new Date(promo.fechaInicio);
+          const fechaFin = new Date(promo.fechaFin);
+
+          if (ahora >= fechaInicio && ahora <= fechaFin) {
+            activeProducts.push({
+              productId: pp.idProducto,
+              promotionId: promo.idPromocion,
+              cantidad_minima: pp.cantidadMinima,
+              valor_descuento: pp.precioPromocional ?? pp.porcentajeDescuento,
+              tipo_descuento: promo.tipoPromocion
+            });
+          }
+        }
+      }
+
+      return { products: activeProducts };
+    } catch (error: any) {
+      console.error(`Error al obtener productos con promoción activa:`, error.message);
+      throw error;
+    }
+  }
 }
-
-
