@@ -17,8 +17,13 @@ export class PromocionService {
   /**
    * Obtener todas las promociones
    */
-  async getAllPromociones(): Promise<Promocion[]> {
-    return this.promocionRepository.findAll();
+  async getAllPromociones(filtros?: {
+    busqueda?: string;
+    activo?: boolean;
+    fechaInicio?: string;
+    fechaFin?: string;
+  }): Promise<Promocion[]> {
+    return this.promocionRepository.searchForAdmin(filtros);
   }
 
   /**

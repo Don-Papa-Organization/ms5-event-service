@@ -1,4 +1,5 @@
 import { Evento } from "../entities";
+import { Op } from "sequelize";
 
 export class EventoRepository {
   constructor() {
@@ -14,7 +15,31 @@ export class EventoRepository {
   }
 
   async findByNombre(nombre: string): Promise<Evento[]> {
-    return Evento.findAll({ where: { nombre } });
+    const termino = nombre.trim();
+
+    return Evento.findAll({
+      where: {
+        [Op.or]: [
+          { nombre: { [Op.like]: `%${termino}%` } },
+          { descripcion: { [Op.like]: `%${termino}%` } }
+        ]
+      }
+    });
+  }
+
+  async searchForAdmin(filtros?: { busqueda?: string }): Promise<Evento[]> {
+    const termino = filtros?.busqueda?.trim();
+
+    const where = termino
+      ? {
+          [Op.or]: [
+            { nombre: { [Op.like]: `%${termino}%` } },
+            { descripcion: { [Op.like]: `%${termino}%` } }
+          ]
+        }
+      : undefined;
+
+    return Evento.findAll({ where });
   }
 
   async create(data: Partial<Evento>): Promise<Evento> {

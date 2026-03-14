@@ -22,8 +22,8 @@ export class EventoService {
   /**
    * Obtener todos los eventos
    */
-  async getAllEventos(): Promise<Evento[]> {
-    return this.eventoRepository.findAll();
+  async getAllEventos(filtros?: { busqueda?: string }): Promise<Evento[]> {
+    return this.eventoRepository.searchForAdmin(filtros);
   }
 
   /**

@@ -15,7 +15,8 @@ const eventoDiaSemanaService = new EventoDiaSemanaService();
  * Solo administradores pueden ver todos los eventos
  */
 export const getEventos = async (req: Request, res: Response, next: NextFunction) => {
-  const eventos = await eventoService.getAllEventos();
+  const busqueda = (req.query.busqueda as string) ?? (req.query.nombre as string);
+  const eventos = await eventoService.getAllEventos({ busqueda });
   
   const response: ApiResponse<any> = {
     success: true,
@@ -95,10 +96,10 @@ export const getEventosProximos = async (req: Request, res: Response, next: Next
  * Acceso público (cualquier usuario autenticado)
  */
 export const searchEventosByNombre = async (req: Request, res: Response, next: NextFunction) => {
-  const nombre = req.query.nombre as string;
+  const nombre = ((req.query.nombre as string) ?? (req.query.busqueda as string) ?? "").trim();
   
-  if (!nombre || nombre.trim() === "") {
-    throw new AppError("Parámetro 'nombre' es requerido", 400);
+  if (!nombre) {
+    throw new AppError("Parámetro 'nombre' o 'busqueda' es requerido", 400);
   }
 
   const eventos = await eventoService.searchEventosByNombre(nombre);

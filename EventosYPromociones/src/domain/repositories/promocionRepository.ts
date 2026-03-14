@@ -1,4 +1,5 @@
 import { Promocion } from "../entities";
+import { Op } from "sequelize";
 
 export class PromocionRepository {
   constructor() {
@@ -7,6 +8,37 @@ export class PromocionRepository {
 
   async findAll(): Promise<Promocion[]> {
     return Promocion.findAll();
+  }
+
+  async searchForAdmin(filtros?: {
+    busqueda?: string;
+    activo?: boolean;
+    fechaInicio?: string;
+    fechaFin?: string;
+  }): Promise<Promocion[]> {
+    const where: any = {};
+    const termino = filtros?.busqueda?.trim();
+
+    if (termino) {
+      where[Op.or] = [
+        { nombre: { [Op.like]: `%${termino}%` } },
+        { descripcion: { [Op.like]: `%${termino}%` } }
+      ];
+    }
+
+    if (filtros?.activo !== undefined) {
+      where.activo = filtros.activo;
+    }
+
+    if (filtros?.fechaInicio) {
+      where.fechaInicio = { [Op.gte]: new Date(filtros.fechaInicio) };
+    }
+
+    if (filtros?.fechaFin) {
+      where.fechaFin = { [Op.lte]: new Date(filtros.fechaFin) };
+    }
+
+    return Promocion.findAll({ where });
   }
 
   async findById(idPromocion: number): Promise<Promocion | null> {

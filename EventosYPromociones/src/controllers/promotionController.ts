@@ -25,7 +25,25 @@ export const getPromocionesActivas = async (req: Request, res: Response, next: N
  * Obtener todas las promociones (admin y empleados)
  */
 export const getPromociones = async (req: Request, res: Response, next: NextFunction) => {
-	const promociones = await promocionService.getAllPromociones();
+	const busqueda = ((req.query.busqueda as string) ?? (req.query.nombre as string) ?? "").trim() || undefined;
+	const fechaInicio = (req.query.fechaInicio as string) ?? undefined;
+	const fechaFin = (req.query.fechaFin as string) ?? undefined;
+	const activoRaw = req.query.activo as string | undefined;
+
+	let activo: boolean | undefined;
+	if (activoRaw !== undefined) {
+		if (activoRaw !== "true" && activoRaw !== "false") {
+			throw new AppError("Parámetro 'activo' debe ser 'true' o 'false'", 400);
+		}
+		activo = activoRaw === "true";
+	}
+
+	const promociones = await promocionService.getAllPromociones({
+		busqueda,
+		activo,
+		fechaInicio,
+		fechaFin
+	});
 	
 	const response: ApiResponse<any> = {
 		success: true,
