@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from "./app";
+import { runEventosPromocionesSeed } from "./config/seedData";
 
 
 const PORT = process.env.PORT;
@@ -15,6 +16,9 @@ async function startServer() {
       await sequelize.sync({ alter: true });
       console.log("✅ Modelos sincronizados con la base de datos");
     }
+
+    await runEventosPromocionesSeed();
+    console.log("✅ Verificacion de seed de eventos y promociones completada");
   } catch (err) {
     console.error("❌ Error inicializando la base de datos:", err);
   }
